@@ -1,0 +1,58 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+}
+
+model CloudAccount {
+  id          Int      @id @default(autoincrement())
+  provider    String   // AWS, GCP, AZURE
+  accountId   String   // AWS Account ID (12 digits)
+  roleArn     String
+  externalId  String?
+  region      String
+  createdAt   DateTime @default(now())
+}
+
+model CloudAsset {
+  id          Int          @id @default(autoincrement())
+  name        String
+  type        String       // AWS_EC2, AWS_S3, etc.
+  region      String
+  tags        Json?        // Flexible tags
+  createdAt   DateTime     @default(now())
+  scanResults ScanResult[]
+}
+
+model Scan {
+  id          Int          @id @default(autoincrement())
+  status      String       // PENDING, RUNNING, COMPLETED, FAILED
+  startedAt   DateTime     @default(now())
+  finishedAt  DateTime?
+  results     ScanResult[]
+}
+
+model ScanResult {
+  id          Int        @id @default(autoincrement())
+  scanId      Int
+  scan        Scan       @relation(fields: [scanId], references: [id])
+  assetId     Int
+  asset       CloudAsset @relation(fields: [assetId], references: [id])
+  severity    String     // LOW, MEDIUM, HIGH, CRITICAL
+  description String
+  createdAt   DateTime   @default(now())
+}

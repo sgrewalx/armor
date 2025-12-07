@@ -1,0 +1,117 @@
+:root {
+  --font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --line-height: 1.5;
+  --font-weight: 400;
+
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f9fafb;
+  --color-text-primary: #111827;
+  --color-text-secondary: #4b5563;
+  --color-accent: #2563eb; /* Blue 600 */
+  --color-accent-hover: #1d4ed8;
+  --color-border: #e5e7eb;
+
+  --spacing-unit: 8px;
+  --border-radius: 6px;
+
+  font-family: var(--font-family);
+  line-height: var(--line-height);
+  font-weight: var(--font-weight);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Reset & Base */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+}
+
+a {
+  font-weight: 500;
+  color: var(--color-accent);
+  text-decoration: inherit;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: var(--color-accent-hover);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-text-primary);
+  line-height: 1.2;
+  margin-bottom: 1rem;
+}
+
+button {
+  background-color: var(--color-accent);
+  color: white;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.25s, background-color 0.25s;
+  border-radius: var(--border-radius);
+}
+
+button:hover {
+  background-color: var(--color-accent-hover);
+}
+
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+/* Utilities */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.card {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-4 {
+    gap: 1rem;
+}
+
+.mt-4 {
+    margin-top: 1rem;
+}

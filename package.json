@@ -1,0 +1,19 @@
+{
+  "name": "armor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "concurrently \"npm run start:server\" \"npm run start:client\"",
+    "start:server": "cd server && npm run dev",
+    "start:client": "cd client && npm run dev",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
