@@ -1,93 +1,56 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid'); // for JTI
-const prisma = require('../db');
-const SchemaService = require('../services/schemaService');
+const ProviderAuth = require('../modules/provider/auth');
+const TenantProvisioning = require('../modules/provider/provisioning');
 const authMiddleware = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// Provider Admin Login
+// Public: Provider Login
 router.post('/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-
-        // Find Provider Admin
-        const admin = await prisma.providerAdmin.findUnique({ where: { email } });
-
-        if (!admin) {
-            return res.status(401).json({ message: 'Invalid credentials' });
-        }
-
-        const isMatch = await bcrypt.compare(password, admin.passwordHash);
-        if (!isMatch) {
-            return res.status(401).json({ message: 'Invalid credentials' });
-        }
-
-        const token = jwt.sign(
-            {
-                userId: admin.id,
-                role: 'provider_admin',
-                jti: uuidv4()
-            },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
-        );
-
-        res.json({ token });
-    } catch (error) {
-        console.error(error);
+        const result = await ProviderAuth.login(email, password);
+        if (!result) return res.status(401).json({ message: 'Invalid credentials' });
+        res.json(result);
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ message: 'Server error' });
     }
 });
 
-// Middleware for protected admin routes
+// Protected Routes
 router.use(authMiddleware);
 
 // Create Tenant
 router.post('/tenants', async (req, res) => {
-    // Only Provider Admins
-    if (req.user.role !== 'provider_admin') {
-        return res.status(403).json({ message: 'Access denied' });
-    }
+    if (req.user.role !== 'provider_admin') return res.status(403).json({ message: 'Access denied' });
 
     try {
         const { name, rootEmail, rootPassword } = req.body;
-        // Validation...
+        if (!name || !rootEmail || !rootPassword) return res.status(400).json({ message: 'Missing fields' });
 
-        const result = await SchemaService.createTenant(name, rootEmail, rootPassword);
+        const result = await TenantProvisioning.createTenant({ name, rootEmail, rootPassword });
         res.status(201).json(result);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Failed to create tenant' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Provisioning failed' });
     }
 });
 
-// Generate Support Access Token (Read-Only)
+// Generate Support Token
 router.post('/support-access', async (req, res) => {
-    if (req.user.role !== 'provider_admin') {
-        return res.status(403).json({ message: 'Access denied' });
+    if (req.user.role !== 'provider_admin') return res.status(403).json({ message: 'Access denied' });
+
+    try {
+        const { tenantId, durationMinutes } = req.body;
+        if (!tenantId) return res.status(400).json({ message: 'Missing tenantId' });
+
+        const result = await ProviderAuth.generateSupportToken(req.user.id, tenantId, durationMinutes);
+        res.json(result);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Failed to generate token' });
     }
-
-    const { tenantId, durationMinutes = 60 } = req.body;
-
-    // Validate existence
-    const tenant = await prisma.tenantMetadata.findUnique({ where: { id: tenantId } });
-    if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
-
-    const token = jwt.sign(
-        {
-            userId: req.user.id, // Support User ID = Provider Admin ID
-            role: 'provider_support',
-            tenantId: tenantId,
-            jti: uuidv4()
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: `${durationMinutes}m` }
-    );
-
-    res.json({ token, expires_in: durationMinutes * 60 });
 });
 
 module.exports = router;

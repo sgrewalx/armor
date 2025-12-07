@@ -1,46 +1,33 @@
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Provider Tables (Public Schema)
 
-CREATE TABLE IF NOT EXISTS public.tenants (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL,
-  slug TEXT NOT NULL UNIQUE,
-  plan TEXT NOT NULL DEFAULT 'free',
-  status TEXT NOT NULL DEFAULT 'active',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+CREATE TABLE IF NOT EXISTS "provider_admins" (
+    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "email" TEXT UNIQUE NOT NULL,
+    "password_hash" TEXT NOT NULL,
+    "is_super_admin" BOOLEAN DEFAULT FALSE,
+    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS public.users (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  email TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
-  is_mach_admin BOOLEAN DEFAULT false,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+CREATE TABLE IF NOT EXISTS "tenants" (
+    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "name" TEXT NOT NULL,
+    "hex_id" TEXT UNIQUE NOT NULL,
+    "schema_name" TEXT UNIQUE NOT NULL, -- t_<hex_id>
+    "status" TEXT DEFAULT 'ACTIVE',
+    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS public.tenant_admins (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
-  role TEXT NOT NULL DEFAULT 'owner',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+CREATE TABLE IF NOT EXISTS "audit_logs" (
+    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "actor_id" TEXT,
+    "actor_type" TEXT, -- 'provider_admin', 'system'
+    "action" TEXT NOT NULL,
+    "target" TEXT,
+    "details" JSONB,
+    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS public.audit_logs (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  actor_user_id UUID REFERENCES public.users(id),
-  tenant_id UUID,
-  action TEXT NOT NULL,
-  resource TEXT,
-  reason TEXT,
-  ip TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.tenant_migrations (
-  id SERIAL PRIMARY KEY,
-  tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE,
-  migration_name TEXT NOT NULL,
-  applied_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+CREATE TABLE IF NOT EXISTS "revoked_tokens" (
+    "jti" TEXT PRIMARY KEY,
+    "revoked_at" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

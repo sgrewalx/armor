@@ -1,38 +1,39 @@
-const prisma = require('./index');
+const { pool } = require('./index');
 
 /**
- * Run a callback within a Tenant's schema context.
- * Uses a Prisma Interactive Transaction to ensure `SET search_path` applies to the queries.
+ * Runs a callback with a tenant-scoped database client.
+ * Handles checkout, `SET search_path`, execution, and release.
  * 
- * @param {string} tenantId - UUID of the tenant
- * @param {function(Prisma.TransactionClient): Promise<T>} callback 
+ * @param {string|object} tenantContext - Can be tenantId (string) or object { schemaName }. 
+ *                                        If string, we lookup. If object, strictly use schemaName.
+ * @param {function(Client): Promise<T>} callback
  * @returns {Promise<T>}
  */
-const runWithTenant = async (tenantId, callback) => {
-    if (!tenantId) {
-        throw new Error('Tenant ID is required for context switching.');
+async function runWithTenant(tenantContext, callback) {
+    const client = await pool.connect();
+    try {
+        let schemaName;
+
+        if (typeof tenantContext === 'string') {
+            // Lookup schema by ID
+            const res = await client.query(`SELECT schema_name FROM tenants WHERE id = $1`, [tenantContext]);
+            if (res.rows.length === 0) throw new Error(`Tenant ${tenantContext} not found`);
+            schemaName = res.rows[0].schema_name;
+        } else if (tenantContext && tenantContext.schemaName) {
+            schemaName = tenantContext.schemaName;
+        } else {
+            throw new Error("Invalid tenant context provided");
+        }
+
+        // Set Search Path
+        // We include 'public' for shared extensions if needed, but primary is strict.
+        await client.query(`SET search_path TO "${schemaName}", public`);
+
+        return await callback(client);
+
+    } finally {
+        client.release();
     }
-
-    // 1. Resolve Schema Name
-    const tenant = await prisma.tenantMetadata.findUnique({
-        where: { id: tenantId }
-    });
-
-    if (!tenant) {
-        throw new Error(`Tenant '${tenantId}' not found.`);
-    }
-
-    // Schema Name is strictly stored in metadata
-    const schemaName = tenant.schemaName;
-
-    // 2. Execute Transaction
-    return prisma.$transaction(async (tx) => {
-        // Set search path for this transaction
-        // "public" is added for access to shared extensions/tables if needed.
-        await tx.$executeRawUnsafe(`SET search_path TO "${schemaName}", public`);
-
-        return callback(tx);
-    });
-};
+}
 
 module.exports = { runWithTenant };

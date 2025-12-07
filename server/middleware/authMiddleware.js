@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const prisma = require('../db');
+const { query } = require('../db');
 const { runWithTenant } = require('../db/context');
 
 const authMiddleware = async (req, res, next) => {
@@ -12,61 +12,57 @@ const authMiddleware = async (req, res, next) => {
         const token = authHeader.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // 0. Check Revocation (using JTI in public.revoked_tokens)
+        // 0. Check Revocation
         if (decoded.jti) {
-            const revoked = await prisma.revokedToken.findUnique({
-                where: { jti: decoded.jti }
-            });
-            if (revoked) {
+            const revokedRes = await query(`SELECT 1 FROM revoked_tokens WHERE jti = $1`, [decoded.jti]);
+            if (revokedRes.rows.length > 0) {
                 return res.status(401).json({ message: 'Token has been revoked' });
             }
         }
 
         // 1. Provider Admin
         if (decoded.role === 'provider_admin') {
-            // Verify against public.provider_admins
-            const admin = await prisma.providerAdmin.findUnique({
-                where: { id: decoded.userId }
-            });
-            if (!admin) {
-                return res.status(401).json({ message: 'Invalid token' });
-            }
+            const adminRes = await query(`SELECT * FROM provider_admins WHERE id = $1`, [decoded.sub]);
+            const admin = adminRes.rows[0];
+
+            if (!admin) return res.status(401).json({ message: 'Invalid token' });
+
             req.user = { ...admin, role: 'provider_admin', type: 'provider' };
             req.tenantId = null;
             return next();
         }
 
         // 2. Tenant Context
-        if (decoded.tenantId) {
-            const tenantId = decoded.tenantId;
-            req.tenantId = tenantId;
+        if (decoded.tenant_id) {
+            req.tenantId = decoded.tenant_id;
 
-            // 2a. Provider Support Access (Read-Only)
+            // 2a. Provider Support (Read-Only)
             if (decoded.role === 'provider_support') {
                 req.user = {
-                    id: decoded.userId,
+                    id: decoded.sub,
                     role: 'provider_support',
                     type: 'support',
-                    tenantId
+                    tenantId: decoded.tenant_id
                 };
                 return next();
             }
 
-            // 2b. Tenant User (Root or Sub-User)
-            // Fetch User from Tenant Schema
-            await runWithTenant(tenantId, async (tx) => {
-                const user = await tx.user.findUnique({
-                    where: { id: decoded.userId }
-                });
+            // 2b. Tenant User (Root/Sub)
+            // Need schema name from token (optimization) or lookup
+            const schemaName = decoded.schema_name;
+            const tenantContext = schemaName ? { schemaName } : decoded.tenant_id;
 
-                if (!user) {
-                    throw new Error('User not found in tenant');
-                }
+            await runWithTenant(tenantContext, async (client) => {
+                const userRes = await client.query(`SELECT * FROM users WHERE id = $1`, [decoded.sub]);
+                const user = userRes.rows[0];
+                if (!user) throw new Error("User not found in tenant");
 
                 req.user = {
                     ...user,
-                    tenantId,
-                    type: 'tenant'
+                    role: user.role, // 'root' or 'sub_user'
+                    iam_policy: user.iam_policy,
+                    tenantId: decoded.tenant_id,
+                    schemaName: schemaName
                 };
             });
             return next();

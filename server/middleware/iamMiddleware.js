@@ -1,39 +1,31 @@
 /**
- * IAM Permission Check Middleware
- * @param {string} requiredAction - e.g. "findings.read", "integrations.write"
+ * Checks if the user has the required permission/feature.
+ * @param {string} feature - e.g. "assets.read", "iam.write"
  */
-const checkIAM = (requiredAction) => {
+const checkIAM = (feature) => {
     return (req, res, next) => {
         const user = req.user;
+        if (!user) return res.status(401).json({ message: 'User context missing' });
 
-        if (!user) {
-            return res.status(401).json({ message: 'User context required' });
-        }
-
-        // 1. Root User: Full Access
+        // 1. Root User (Full Access)
         if (user.role === 'root') {
             return next();
         }
 
-        // 2. Provider Support: Read-Only Access
+        // 2. Provider Support (Read-Only)
         if (user.role === 'provider_support') {
-            // Check if action matches "safe" pattern
-            if (requiredAction.endsWith('.read') || requiredAction.includes('list') || requiredAction.includes('view') || requiredAction.includes('get')) {
-                return next();
-            }
+            const isRead = feature.endsWith('.read') || feature.includes('get') || feature.includes('list');
+            if (isRead) return next();
             return res.status(403).json({ message: 'Provider Support is Read-Only' });
         }
 
-        // 3. Sub-User: Check IAM Policy
+        // 3. Sub-User (Check Policy)
         if (user.role === 'sub_user') {
-            const policy = user.iamPolicy || {};
-            const allowed = policy.allowed_features || [];
-
-            if (allowed.includes(requiredAction)) {
+            const allowed = user.iam_policy?.allowed_features || [];
+            if (allowed.includes('*') || allowed.includes(feature)) {
                 return next();
             }
-
-            return res.status(403).json({ message: `Access Denied: Missing permission '${requiredAction}'` });
+            return res.status(403).json({ message: `Missing permission: ${feature}` });
         }
 
         return res.status(403).json({ message: 'Unauthorized role' });
