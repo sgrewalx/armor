@@ -1,0 +1,29 @@
+name: Armor CI
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: armor_test
+        ports: ["5432:5432"]
+    steps:
+      - uses: actions/checkout@v4
+      - run: sleep 10
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: npm ci
+      - name: Run public migrations
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/armor_test
+        run: psql "$DATABASE_URL" -f server/migrations/000_init_public.sql
+      - name: Run tests
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/armor_test
+          JWT_SECRET: test-secret
+        run: node server/tests/run_tests.js
