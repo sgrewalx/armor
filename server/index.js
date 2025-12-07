@@ -1,29 +1,36 @@
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
+require('dotenv').config();
 
-dotenv.config();
+const adminRoutes = require('./routes/adminRoutes');
+const authRoutes = require('./routes/authRoutes');
+const authMiddleware = require('./middleware/authMiddleware');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
 
+// Provider Admin Routes (Public Schema)
+app.use('/armor-admin', adminRoutes);
+
+// Tenant Auth Routes (Dynamic Schema)
+app.use('/auth', authRoutes);
+
+// Protected Identity Verification Route
+app.get('/api/me', authMiddleware, (req, res) => {
+    res.json({
+        message: 'Identity Verified',
+        user: req.user,
+        tenantId: req.tenantId
+    });
+});
+
 app.get('/', (req, res) => {
-    res.send('Armor API is running');
+    res.send('Armor API Running');
 });
 
-app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/inventory', require('./routes/inventoryRoutes'));
-app.use('/api/scans', require('./routes/scanRoutes'));
-app.use('/api/cloud-accounts', require('./routes/cloudAccountRoutes'));
-
-// Basic Health Check
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date() });
-});
-
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
 });

@@ -3,29 +3,80 @@
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["public"]
 }
 
+// ==========================================
+// PROVIDER CONTEXT (Stored in 'public')
+// ==========================================
+
+model ProviderAdmin {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  isSuperAdmin  Boolean  @default(false) @map("is_super_admin") // Can manage other provider admins
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("provider_admins")
+  @@schema("public")
+}
+
+model TenantMetadata {
+  id          String   @id @default(uuid())
+  name        String
+  hexId       String   @unique @map("hex_id") // Strict hex string for schema name constraint
+  schemaName  String   @unique @map("schema_name") // t_<hexId>
+  status      String   @default("ACTIVE") // ACTIVE, DISABLED
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("tenants")
+  @@schema("public")
+}
+
+model RevokedToken {
+  jti         String   @id
+  revokedAt   DateTime @default(now()) @map("revoked_at")
+
+  @@map("revoked_tokens")
+  @@schema("public")
+}
+
+// ==========================================
+// TENANT CONTEXT (Stored in 't_<hex>')
+// ==========================================
+// These models are used dynamically with `SET search_path`.
+// They are technically registered in "public" for Prisma Client generation purposes,
+// but runtime logic will redirect them.
+
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  name      String?
-  createdAt DateTime @default(now())
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         String   // 'root', 'sub_user'
+  iamPolicy    Json?    @map("iam_policy") // { allowed_features: [], denied_features: [] }
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+  @@schema("public")
 }
 
 model CloudAccount {
   id          Int      @id @default(autoincrement())
   provider    String   // AWS, GCP, AZURE
-  accountId   String   // AWS Account ID (12 digits)
-  roleArn     String
-  externalId  String?
+  accountId   String   @map("account_id")
+  roleArn     String   @map("role_arn")
+  externalId  String?  @map("external_id")
   region      String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("cloud_accounts")
+  @@schema("public")
 }
 
 model CloudAsset {
@@ -33,26 +84,36 @@ model CloudAsset {
   name        String
   type        String       // AWS_EC2, AWS_S3, etc.
   region      String
-  tags        Json?        // Flexible tags
-  createdAt   DateTime     @default(now())
+  tags        Json?
+  createdAt   DateTime     @default(now()) @map("created_at")
   scanResults ScanResult[]
+
+  @@map("cloud_assets")
+  @@schema("public")
 }
 
 model Scan {
   id          Int          @id @default(autoincrement())
   status      String       // PENDING, RUNNING, COMPLETED, FAILED
-  startedAt   DateTime     @default(now())
-  finishedAt  DateTime?
+  startedAt   DateTime     @default(now()) @map("started_at")
+  finishedAt  DateTime?    @map("finished_at")
   results     ScanResult[]
+
+  @@map("scans")
+  @@schema("public")
 }
 
 model ScanResult {
   id          Int        @id @default(autoincrement())
-  scanId      Int
+  scanId      Int        @map("scan_id")
   scan        Scan       @relation(fields: [scanId], references: [id])
-  assetId     Int
+  assetId     Int        @map("asset_id")
   asset       CloudAsset @relation(fields: [assetId], references: [id])
   severity    String     // LOW, MEDIUM, HIGH, CRITICAL
   description String
-  createdAt   DateTime   @default(now())
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  @@map("scan_results")
+  @@schema("public")
 }
+
