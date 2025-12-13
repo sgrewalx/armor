@@ -2,6 +2,7 @@ const express = require('express');
 const AssetsController = require('../modules/assets/controller');
 const FindingsController = require('../modules/findings/controller');
 const CloudAccountsController = require('../modules/cloudAccounts/controller');
+const { scanEc2ForTenant } = require('../modules/cloud/aws/ec2Scan');
 const authMiddleware = require('../middleware/authMiddleware');
 const { checkIAM } = require('../middleware/iamMiddleware');
 
@@ -19,5 +20,8 @@ router.post('/cloud-accounts', checkIAM('cloud_accounts.write'), CloudAccountsCo
 
 // Findings
 router.get('/findings', checkIAM('findings.read'), FindingsController.list);
+
+// Manual AWS EC2 Scan
+router.post('/scans/aws/ec2', checkIAM('assets.write'), scanEc2ForTenant);
 
 module.exports = router;
