@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Activity, AlertTriangle, Cloud, ShieldCheck } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const defaultSummary = {
   assets: 0,
@@ -44,13 +45,13 @@ function Dashboard() {
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const token = typeof window !== 'undefined' ? localStorage.getItem('tenant_token') : null;
+  const { authHeaders, token } = useAuth();
 
   useEffect(() => {
     if (!token) return;
     setLoading(true);
-    fetch('http://localhost:3000/api/assets', {
-      headers: { Authorization: `Bearer ${token}` },
+    fetch('/api/assets', {
+      headers: authHeaders,
     })
       .then((res) => {
         if (!res.ok) throw new Error('Unable to load assets');

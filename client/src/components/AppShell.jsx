@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
 import { Shield, Cloud, LayoutDashboard, Server, AlertOctagon, Settings, LogOut, User } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
@@ -12,30 +12,7 @@ const navItems = [
 
 function AppShell() {
   const navigate = useNavigate();
-  const [tenantInfo, setTenantInfo] = useState(null);
-  const token = typeof window !== 'undefined' ? localStorage.getItem('tenant_token') : null;
-
-  useEffect(() => {
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-
-    fetch('http://localhost:3000/api/me', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to fetch tenant');
-        return res.json();
-      })
-      .then((data) => setTenantInfo(data))
-      .catch(() => setTenantInfo({ tenantId: 'Unknown', user: { email: 'user@tenant.com' } }));
-  }, [navigate, token]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('tenant_token');
-    navigate('/login');
-  };
+  const { tenantInfo, logout, user } = useAuth();
 
   return (
     <div className="app-shell">
@@ -61,7 +38,13 @@ function AppShell() {
           ))}
         </nav>
 
-        <button className="sidebar__logout" onClick={handleLogout}>
+        <button
+          className="sidebar__logout"
+          onClick={() => {
+            logout();
+            navigate('/login');
+          }}
+        >
           <LogOut size={18} /> Logout
         </button>
       </aside>
@@ -77,10 +60,16 @@ function AppShell() {
               <User size={18} />
             </div>
             <div className="header__profile-text">
-              <div className="header__profile-name">{tenantInfo?.user?.email || 'Signed in user'}</div>
+              <div className="header__profile-name">{user?.email || tenantInfo?.user?.email || 'Signed in user'}</div>
               <div className="header__profile-role">Security Admin</div>
             </div>
-            <button className="ghost-button" onClick={handleLogout}>
+            <button
+              className="ghost-button"
+              onClick={() => {
+                logout();
+                navigate('/login');
+              }}
+            >
               Logout
             </button>
           </div>

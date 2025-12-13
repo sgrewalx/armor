@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 function TenantLogin() {
   const [tenantId, setTenantId] = useState('');
@@ -9,13 +10,20 @@ function TenantLogin() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login, token } = useAuth();
+
+  useEffect(() => {
+    if (token) {
+      navigate('/dashboard');
+    }
+  }, [token, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:3000/auth/login', {
+      const res = await fetch('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenantId, email, password }),
@@ -23,7 +31,7 @@ function TenantLogin() {
 
       if (res.ok) {
         const data = await res.json();
-        localStorage.setItem('tenant_token', data.token);
+        login(data.token, data.user);
         navigate('/dashboard');
       } else {
         setError('Invalid credentials or tenant. Please try again.');

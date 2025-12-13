@@ -1,23 +1,10 @@
-import { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Shield, User, LogOut } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 function Header() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [tenantToken, setTenantToken] = useState(
-    typeof window !== 'undefined' ? localStorage.getItem('tenant_token') : null,
-  );
-
-  useEffect(() => {
-    setTenantToken(typeof window !== 'undefined' ? localStorage.getItem('tenant_token') : null);
-  }, [location]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('tenant_token');
-    setTenantToken(null);
-    navigate('/');
-  };
+  const { isAuthenticated, logout } = useAuth();
 
   return (
     <header className="site-header">
@@ -31,12 +18,18 @@ function Header() {
         </div>
       </Link>
 
-      {tenantToken ? (
+      {isAuthenticated ? (
         <div className="user-menu">
           <button className="ghost-button" onClick={() => navigate('/dashboard')}>
             Open dashboard
           </button>
-          <button className="user-menu__chip" onClick={handleLogout}>
+          <button
+            className="user-menu__chip"
+            onClick={() => {
+              logout();
+              navigate('/');
+            }}
+          >
             <User size={16} />
             <span>Sign out</span>
             <LogOut size={14} />
