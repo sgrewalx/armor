@@ -3,11 +3,11 @@ import { useEffect, useState } from 'react';
 import { Shield, Cloud, LayoutDashboard, Server, AlertOctagon, Settings, LogOut, User } from 'lucide-react';
 
 const navItems = [
-  { to: '/app/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-  { to: '/app/cloud-accounts', label: 'Cloud Accounts', icon: <Cloud size={18} /> },
-  { to: '/app/assets', label: 'Assets', icon: <Server size={18} /> },
-  { to: '/app/findings', label: 'Findings', icon: <AlertOctagon size={18} /> },
-  { to: '/app/settings', label: 'Settings', icon: <Settings size={18} /> },
+  { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+  { to: '/cloud-accounts', label: 'Cloud Accounts', icon: <Cloud size={18} /> },
+  { to: '/assets', label: 'Assets', icon: <Server size={18} /> },
+  { to: '/findings', label: 'Findings', icon: <AlertOctagon size={18} /> },
+  { to: '/settings', label: 'Settings', icon: <Settings size={18} /> },
 ];
 
 function AppShell() {

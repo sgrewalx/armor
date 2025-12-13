@@ -24,7 +24,7 @@ function TenantLogin() {
       if (res.ok) {
         const data = await res.json();
         localStorage.setItem('tenant_token', data.token);
-        navigate('/app/dashboard');
+        navigate('/dashboard');
       } else {
         setError('Invalid credentials or tenant. Please try again.');
       }
