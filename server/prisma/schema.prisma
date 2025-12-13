@@ -70,9 +70,12 @@ model CloudAccount {
   id          Int      @id @default(autoincrement())
   provider    String   // AWS, GCP, AZURE
   accountId   String   @map("account_id")
-  roleArn     String   @map("role_arn")
+  displayName String   @map("display_name")
+  status      String   @default("PENDING")
+  metadata    Json?
+  roleArn     String?  @map("role_arn")
   externalId  String?  @map("external_id")
-  region      String
+  region      String?
   createdAt   DateTime @default(now()) @map("created_at")
 
   @@map("cloud_accounts")

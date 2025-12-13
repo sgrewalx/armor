@@ -11,12 +11,14 @@ CREATE TABLE "users" (
 
 CREATE TABLE "cloud_accounts" (
     "id" SERIAL PRIMARY KEY,
-    "provider" TEXT NOT NULL, -- 'AWS'
+    "provider" TEXT NOT NULL, -- 'AWS', 'AZURE', 'GCP', 'OCI'
     "account_id" TEXT NOT NULL,
-    "role_arn" TEXT NOT NULL,
-    "external_id" TEXT,
-    "region" TEXT NOT NULL,
+    "display_name" TEXT NOT NULL,
     "status" TEXT DEFAULT 'PENDING',
+    "metadata" JSONB DEFAULT '{}'::jsonb,
+    "role_arn" TEXT,
+    "external_id" TEXT,
+    "region" TEXT,
     "created_at" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
